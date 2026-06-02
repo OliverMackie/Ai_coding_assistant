@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 from google import genai
 import argparse
 from google.genai import types
-
+from prompts import system_prompt
+from function_call import available_functions
 
 
 def main():
@@ -24,7 +25,10 @@ def main():
     client = genai.Client(api_key=api_key)
     content = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=messages)
+        contents=messages,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=[available_functions]),)
 
     if content != None: 
         if args.verbose:
@@ -32,6 +36,9 @@ def main():
             print(f"Prompt tokens: {content.usage_metadata.prompt_token_count}")
             print(f"Response tokens: {content.usage_metadata.candidates_token_count}")
         print(content.text)
+        if (content.function_calls != None) and len(content.function_calls) > 0:
+            for function_call in content.function_calls:
+                print(f"Calling function: {function_call.name}({function_call.args})")
     else:
         raise Exception("API request failed")
     
